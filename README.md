@@ -65,12 +65,38 @@ You need to set the NPM_TOKEN parameter to the NPM token to the private registry
 $ docker build --build-arg NPM_TOKEN="YOURTOKENHERE" .
 ```
 
+#### Run
+
+The most easy way to run is by using the docker-compose setup. This will bootup the postgres and redis components as well. The docker-compose setup depends on 2 environment files and 1 json file:
+
+- .docker.env
+- .secrets.env
+- env-orgs.json
+
+Make sure to copy the .secrets.env.example and env-orgs.json.example files and provide the configuration values.
+
+```bash
+cp .secrets.env.example .secrets.env
+cp env-orgs.json.example env-orgs.json
+# provide configuration values for .secrets.env and env-orgs.json
+docker-compose up
+```
+
+If you desire to run all on your local machine (redis, postgres) you might want to use following approach.
+
+```bash
+# ensure redis and postgres is running on localhost
+source .secrets.env
+source .local.env
+npm run start
+```
+
 #### Troubleshooting
 
 If the docker image doesn't start you can debug the image using an interactive shell session. This allows you to browse the folders, update the files to test things and run the portal.
 
 ```bash
-$ docker run --rm -it opensource-portal sh
+$ docker run --rm -it --env-file .secrets.env --env-file .docker.env opensource-portal sh
 /usr/src/repos $ ls
 app.js                   data                     lib                      package.json             tsconfig.tsbuildinfo     webhooks
 app.js.map               entities                 localEnvironment.js      routes                   user
