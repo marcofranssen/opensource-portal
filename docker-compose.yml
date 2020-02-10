@@ -1,11 +1,24 @@
 version: '3.7'
 
 services:
+  gateway:
+    image: traefik:v2.1
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080"
+    networks:
+      - portal
+      - keycloak
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
   portal:
     image: opensource-portal
     build: .
-    ports:
-      - "3000:3000"
     networks:
       - portal
     env_file:
@@ -16,11 +29,17 @@ services:
     depends_on:
       - portal-cache
       - portal-db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.web.rule=Host(`localhost`)"
+      - "traefik.http.routers.web.entrypoints=web"
 
   portal-cache:
     image: redis
     networks:
       - portal
+    labels:
+      - "traefik.enable=false"
 
   portal-db:
     image: postgres
@@ -32,10 +51,50 @@ services:
       POSTGRES_DB: portal-repos
       POSTGRES_USER: portal
       POSTGRES_PWD: latrop
+    labels:
+      - "traefik.enable=false"
+
+  keycloak:
+    image: jboss/keycloak:8.0.2
+    ports:
+      - "8080:8080"
+    environment:
+      DB_VENDOR: postgres
+      DB_ADDR: keycloak_db
+      DB_DATABASE: keycloak
+      DB_SCHEMA: public
+      DB_USER: keycloak
+      DB_PASSWORD: kaolcyek
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: Pa55w0rd
+    networks:
+      - keycloak
+    depends_on:
+      - keycload_db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.web.rule=Host(`sso.dev.local`)"
+      - "traefik.http.routers.web.entrypoints=web"
+
+  keycload_db:
+    image: postgres
+    volumes:
+      - keycloak_postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PWD: kaolcyek
+    networks:
+      - keycloak
+    labels:
+      - "traefik.enable=false"
 
 networks:
   portal:
+  keycloak:
 
 volumes:
   portal_postgres_data:
+    driver: local
+  keycloak_postgres_data:
     driver: local
